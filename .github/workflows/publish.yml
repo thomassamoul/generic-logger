@@ -1,8 +1,9 @@
 name: Publish to NPM
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*'  # Triggers on tags like v0.1.0, v1.0.0, etc.
 
 jobs:
   publish:
