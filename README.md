@@ -424,63 +424,473 @@ await repository.destroy(): Promise<void>;
 
 ### Repository Configuration
 
+Complete configuration options for the logger repository:
+
 ```typescript
 interface LoggerRepositoryConfig {
-  environment?: LoggerEnvironment; // 'dev' | 'stage' | 'prod'
-  adapters?: AdapterConfigs;      // Optional (use registerAdapter instead)
+  /**
+   * Environment setting - affects default configurations
+   * - 'dev': Development environment (more verbose logging)
+   * - 'stage': Staging environment
+   * - 'prod': Production environment (minimal logging)
+   */
+  environment?: 'dev' | 'stage' | 'prod';
+
+  /**
+   * Adapter configurations (optional - use registerAdapter() instead)
+   * This is mainly for convenience and legacy support
+   */
+  adapters?: AdapterConfigs;
+
+  /**
+   * Sanitization configuration
+   */
   sanitization?: {
+    /**
+     * Enable/disable automatic data sanitization
+     * @default true
+     */
     enabled?: boolean;
+    
+    /**
+     * Custom default sanitizer instance
+     * If not provided, uses DefaultSanitizer
+     */
     defaultSanitizer?: ISanitizer;
   };
-  severity?: LogLevel;            // Minimum log level
+
+  /**
+   * Minimum log level to process
+   * Logs below this level will be ignored globally
+   * - 'debug': All logs (debug, info, warn, error)
+   * - 'info': Info, warn, error (default)
+   * - 'warn': Warning and error only
+   * - 'error': Error only
+   * @default 'info'
+   */
+  severity?: 'debug' | 'info' | 'warn' | 'error';
 }
 ```
 
 ### Adapter Configurations
 
 #### ConsoleAdapterConfig
+
+Simple console logging adapter with optional colorization:
+
 ```typescript
-{
+interface ConsoleAdapterConfig {
+  /**
+   * Enable/disable the console adapter
+   */
   enabled: boolean;
+
+  /**
+   * Enable ANSI color codes for terminal output
+   * - Colors work in Node.js terminals
+   * - May not work in browser consoles
+   * @default false
+   */
   colorize?: boolean;
 }
 ```
 
-#### SentryAdapterConfig
+**Example:**
 ```typescript
-{
+await logger.registerAdapter('console', new ConsoleLoggerAdapter(), {
+  enabled: true,
+  colorize: true  // Enable colored output
+});
+```
+
+#### SentryAdapterConfig
+
+Sentry integration adapter - requires your pre-initialized Sentry instance:
+
+```typescript
+interface SentryAdapterConfig {
+  /**
+   * Enable/disable the Sentry adapter
+   */
   enabled: boolean;
-  sentryInstance: any; // Your initialized Sentry instance
+
+  /**
+   * Pre-initialized Sentry instance
+   * Compatible with:
+   * - @sentry/react-native
+   * - @sentry/browser
+   * - @sentry/node
+   * 
+   * You must initialize Sentry yourself before passing it here
+   */
+  sentryInstance: any;
 }
+```
+
+**Example:**
+```typescript
+import * as Sentry from '@sentry/react-native';
+
+// Initialize Sentry first
+Sentry.init({
+  dsn: 'your-dsn-here',
+  environment: 'production',
+  tracesSampleRate: 1.0,
+});
+
+// Then register adapter
+await logger.registerAdapter('sentry', new SentryLoggerAdapter(), {
+  enabled: true,
+  sentryInstance: Sentry
+});
 ```
 
 #### WinstonAdapterConfig
+
+Winston logger integration - requires your pre-configured Winston logger:
+
 ```typescript
-{
+interface WinstonAdapterConfig {
+  /**
+   * Enable/disable the Winston adapter
+   */
   enabled: boolean;
-  winstonInstance: any; // Your Winston logger instance
+
+  /**
+   * Pre-configured Winston logger instance
+   * Create your logger with transports, formats, etc. before passing it
+   */
+  winstonInstance: any;
 }
+```
+
+**Example:**
+```typescript
+import winston from 'winston';
+
+const winstonLogger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' }),
+    new winston.transports.Console()
+  ],
+});
+
+await logger.registerAdapter('winston', new WinstonLoggerAdapter(), {
+  enabled: true,
+  winstonInstance: winstonLogger
+});
 ```
 
 #### DataDogAdapterConfig
+
+DataDog integration adapter - requires your pre-initialized DataDog instance:
+
 ```typescript
-{
+interface DataDogAdapterConfig {
+  /**
+   * Enable/disable the DataDog adapter
+   */
   enabled: boolean;
-  datadogInstance: any; // Your DataDog instance
+
+  /**
+   * Pre-initialized DataDog instance
+   * Compatible with:
+   * - @datadog/mobile-react-native
+   * - @datadog/browser-rum
+   * - datadog-logs-js
+   */
+  datadogInstance: any;
 }
 ```
 
-#### FileAdapterConfig
+**Example:**
 ```typescript
-{
+import { DatadogProvider, Configuration } from '@datadog/mobile-react-native';
+
+const config = new Configuration('client-token', 'application-id', {
+  env: 'production',
+  service: 'my-app'
+});
+DatadogProvider.initialize(config);
+
+await logger.registerAdapter('datadog', new DataDogLoggerAdapter(), {
+  enabled: true,
+  datadogInstance: DatadogProvider
+});
+```
+
+#### FileAdapterConfig
+
+File logging adapter with custom file writer function:
+
+```typescript
+interface FileAdapterConfig {
+  /**
+   * Enable/disable the file adapter
+   */
   enabled: boolean;
+
+  /**
+   * Custom file writer function
+   * Required for actual file writing
+   * If not provided, logs are buffered in memory
+   * 
+   * @param message - Formatted log message
+   * @param level - Log level
+   * @param context - Log context with data, metadata, etc.
+   */
   fileWriter?: (message: string, level: LogLevel, context?: LogContext) => Promise<void>;
+
+  /**
+   * Output formats for log entries
+   * - 'json': JSON format
+   * - 'log': Plain text format
+   * @default ['json']
+   */
   formats?: ('json' | 'log')[];
+
+  /**
+   * Maximum file size in bytes before rotation
+   * (Currently informational - implement in your fileWriter)
+   */
   maxSize?: number;
+
+  /**
+   * Maximum number of log files to keep
+   * (Currently informational - implement in your fileWriter)
+   */
   maxFiles?: number;
+
+  /**
+   * Directory for log files
+   * (Currently informational - implement in your fileWriter)
+   */
   directory?: string;
+
+  /**
+   * Per-adapter minimum log level
+   * @default 'info'
+   */
+  severity?: LogLevel;
 }
 ```
+
+**Example (Node.js):**
+```typescript
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+await logger.registerAdapter('file', new FileLoggerAdapter(), {
+  enabled: true,
+  formats: ['json', 'log'],
+  directory: './logs',
+  fileWriter: async (message, level, context) => {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      ...context
+    };
+    const logLine = JSON.stringify(logEntry) + '\n';
+    await fs.appendFile(path.join('./logs', 'app.log'), logLine);
+  }
+});
+```
+
+#### Base Adapter Configuration
+
+All adapters inherit from this base configuration:
+
+```typescript
+interface LoggerAdapterConfig {
+  /**
+   * Enable/disable this adapter
+   */
+  enabled: boolean;
+
+  /**
+   * Minimum log level for this specific adapter
+   * Overrides global severity setting
+   * @default 'info'
+   */
+  severity?: 'debug' | 'info' | 'warn' | 'error';
+
+  /**
+   * Additional adapter-specific configuration
+   */
+  [key: string]: unknown;
+}
+```
+
+### LogContext Configuration
+
+Complete context options for log entries:
+
+```typescript
+interface LogContext {
+  /**
+   * Custom tag for categorizing logs (e.g., '[Auth]', '[Payment]')
+   * Useful for filtering and sanitization
+   */
+  tag?: string;
+
+  /**
+   * File name where the log originated
+   * Auto-detected if not provided
+   */
+  file?: string;
+
+  /**
+   * Function or component name where the log originated
+   * Auto-detected if not provided
+   */
+  function?: string;
+
+  /**
+   * Additional data object to include in the log
+   * Will be sanitized if sanitization is enabled
+   */
+  data?: any;
+
+  /**
+   * Error object to log
+   * Will be formatted appropriately by adapters
+   */
+  error?: Error | any;
+
+  /**
+   * Timestamp override
+   * Defaults to current time if not provided
+   */
+  timestamp?: Date;
+
+  /**
+   * Additional metadata (key-value pairs)
+   * Useful for structured logging
+   */
+  metadata?: Record<string, unknown>;
+
+  /**
+   * Custom sanitizer for this specific log call
+   * Overrides default and tag-based sanitizers
+   */
+  sanitizer?: ISanitizer;
+
+  /**
+   * Skip sanitization for this call
+   * Use with caution - sensitive data may be logged
+   */
+  skipSanitization?: boolean;
+}
+```
+
+### Example Log Output
+
+When using the console adapter with colorization enabled, you'll see output like this:
+
+#### Debug Level (Green)
+```
+[DEBUG] 2024-11-03T12:34:56.789Z [UserService.getUser:user-service.ts] Fetching user data
+```
+*(In terminal: Green text)*
+
+#### Info Level (Cyan)
+```
+[INFO] 2024-11-03T12:34:56.789Z [UserService.getUser:user-service.ts] User found: john@example.com
+```
+*(In terminal: Cyan text)*
+
+#### Warning Level (Yellow)
+```
+[WARN] 2024-11-03T12:34:56.789Z [PaymentService.process:payment-service.ts] Payment retry attempt 3
+```
+*(In terminal: Yellow text)*
+
+#### Error Level (Red)
+```
+[ERROR] 2024-11-03T12:34:56.789Z [DatabaseService.connect:database-service.ts] Connection failed
+```
+*(In terminal: Red text)*
+
+#### With Context Data
+```typescript
+logger.info('User logged in', {
+  tag: '[Auth]',
+  data: { userId: 123, email: 'user@example.com' }
+});
+```
+
+**Output:**
+```
+[INFO] 2024-11-03T12:34:56.789Z [Auth] User logged in { userId: 123, email: 'user@example.com' }
+```
+
+#### With Error Object
+```typescript
+logger.error('Payment processing failed', new Error('Insufficient funds'), {
+  tag: '[Payment]',
+  data: { transactionId: 'tx-123', amount: 100 }
+});
+```
+
+**Output:**
+```
+[ERROR] 2024-11-03T12:34:56.789Z [Payment] Payment processing failed
+Error: {
+  message: "Insufficient funds",
+  stack: "Error: Insufficient funds\n    at PaymentService.process..."
+}
+{ transactionId: 'tx-123', amount: 100 }
+```
+
+#### With Sanitization
+```typescript
+logger.info('User registration', {
+  data: {
+    username: 'john',
+    password: 'secret123',  // Will be redacted
+    email: 'john@example.com' // Will be masked
+  }
+});
+```
+
+**Output:**
+```
+[INFO] 2024-11-03T12:34:56.789Z User registration { 
+  username: 'john',
+  password: '[REDACTED]',
+  email: 'joh***@example.com'
+}
+```
+
+#### Multiple Adapters
+When using multiple adapters, the same log goes to all enabled adapters:
+
+```typescript
+// Console adapter (colored output in terminal)
+await logger.registerAdapter('console', new ConsoleLoggerAdapter(), {
+  enabled: true,
+  colorize: true
+});
+
+// Sentry adapter (errors go to Sentry)
+await logger.registerAdapter('sentry', new SentryLoggerAdapter(), {
+  enabled: true,
+  sentryInstance: Sentry
+});
+
+logger.error('Critical error occurred', error);
+```
+
+**Result:**
+- Console: Shows colored error in terminal
+- Sentry: Creates error event with breadcrumbs and context
 
 ## Testing
 
