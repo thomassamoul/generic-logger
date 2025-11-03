@@ -49,23 +49,34 @@ function checkWorkingDirectory() {
   const status = execSync('git status --porcelain', { encoding: 'utf8' });
   const files = status.trim().split('\n').filter(line => line.trim());
   
-  // Filter out only package.json and package-lock.json changes
-  const otherFiles = files.filter(line => {
-    const file = line.trim().substring(3).trim();
-    return file !== 'package.json' && file !== 'package-lock.json';
+  if (files.length === 0) {
+    return false; // No changes at all
+  }
+  
+  // Parse git status output - format: "XY filename"
+  // X = staged status, Y = unstaged status
+  const versionFiles = [];
+  const otherFiles = [];
+  
+  files.forEach(line => {
+    const statusCode = line.trim().substring(0, 2);
+    const file = line.trim().substring(2).trim();
+    
+    if (file === 'package.json' || file === 'package-lock.json') {
+      versionFiles.push({ status: statusCode, file });
+    } else {
+      otherFiles.push({ status: statusCode, file });
+    }
   });
   
   if (otherFiles.length > 0) {
     console.log('⚠️  Warning: You have uncommitted changes besides package.json:');
-    otherFiles.forEach(line => console.log(`   ${line.trim()}`));
+    otherFiles.forEach(({ file }) => console.log(`   ${file}`));
     console.log('\nPlease commit or stash them first.');
     process.exit(1);
   }
   
-  return files.filter(line => {
-    const file = line.trim().substring(3).trim();
-    return file === 'package.json' || file === 'package-lock.json';
-  }).length > 0;
+  return versionFiles.length > 0; // Return true if there are version file changes
 }
 
 function createRelease(version) {
@@ -85,46 +96,71 @@ function createRelease(version) {
   // Check working directory
   const hasVersionChanges = checkWorkingDirectory();
   
-  if (!hasVersionChanges) {
-    console.log('ℹ️  No changes to package.json detected. Version may already be committed.');
+  // Always ensure package.json is staged before checking/committing
+  try {
+    execSync('git add package.json package-lock.json 2>/dev/null || true', { stdio: 'pipe' });
+  } catch (error) {
+    // Ignore if files don't exist or aren't tracked
   }
   
-  // Commit version change if needed
-  if (hasVersionChanges) {
+  if (!hasVersionChanges) {
+    console.log('ℹ️  No changes to package.json detected. Version may already be committed.');
+    console.log('ℹ️  Creating tag on current commit...');
+  } else {
+    // Commit version change
     try {
-      execSync('git add package.json package-lock.json', { stdio: 'inherit' });
       execSync(`git commit -m "chore: bump version to ${version}"`, { stdio: 'inherit' });
       console.log(`✓ Committed version change`);
     } catch (error) {
-      console.error('Failed to commit version change:', error.message);
-      process.exit(1);
+      // If commit fails (maybe nothing to commit), that's okay
+      console.log('ℹ️  Version change already committed or no changes to commit');
     }
   }
   
-  // Create tag
+  // Always create tag (on current HEAD)
   try {
-    execSync(`git tag -a ${tagName} -m "Release ${tagName}"`, { stdio: 'inherit' });
-    console.log(`✓ Created tag: ${tagName}`);
+    // Check if tag exists first
+    try {
+      execSync(`git rev-parse -q --verify "refs/tags/${tagName}" > /dev/null 2>&1`, { stdio: 'ignore' });
+      console.log(`⚠️  Tag ${tagName} already exists locally. Skipping tag creation.`);
+    } catch {
+      // Tag doesn't exist, create it
+      execSync(`git tag -a ${tagName} -m "Release ${tagName}"`, { stdio: 'inherit' });
+      console.log(`✓ Created tag: ${tagName}`);
+    }
   } catch (error) {
     console.error('Failed to create tag:', error.message);
     process.exit(1);
   }
   
-  // Push commit (if there was a new commit)
-  if (hasVersionChanges) {
-    try {
+  // Push commit (if there was a new commit or unpushed commits)
+  try {
+    // Check if there are unpushed commits
+    const localCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+    const remoteCommit = execSync('git rev-parse origin/main 2>/dev/null || echo ""', { encoding: 'utf8' }).trim();
+    
+    if (localCommit !== remoteCommit || hasVersionChanges) {
       execSync('git push origin main', { stdio: 'inherit' });
       console.log(`✓ Pushed commit to main`);
-    } catch (error) {
-      console.error('Failed to push commit:', error.message);
-      console.log('\n💡 You may need to push manually: git push origin main');
+    } else {
+      console.log('ℹ️  No new commits to push');
     }
+  } catch (error) {
+    console.error('Failed to push commit:', error.message);
+    console.log('\n💡 You may need to push manually: git push origin main');
   }
   
-  // Push tag
+  // Always push tag
   try {
-    execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
-    console.log(`✓ Pushed tag ${tagName}`);
+    // Check if tag exists on remote
+    try {
+      execSync(`git ls-remote --tags origin ${tagName} > /dev/null 2>&1`, { stdio: 'ignore' });
+      console.log(`⚠️  Tag ${tagName} already exists on remote. Skipping tag push.`);
+    } catch {
+      // Tag doesn't exist on remote, push it
+      execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
+      console.log(`✓ Pushed tag ${tagName} to remote`);
+    }
   } catch (error) {
     console.error('Failed to push tag:', error.message);
     console.log(`\n💡 You may need to push manually: git push origin ${tagName}`);
