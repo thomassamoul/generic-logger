@@ -1,0 +1,15 @@
+logger/
+*.ts
+!*.d.ts
+tsconfig*.json
+jest.config.js
+.gitignore
+.github/
+__tests__/
+*.test.ts
+*.spec.ts
+*.md
+!README.md
+.eslintrc*
+.prettierrc*
+
