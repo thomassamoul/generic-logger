@@ -35,7 +35,8 @@
     "version:major": "node scripts/version-bump.js major",
     "release:patch": "node scripts/version-bump.js patch --release",
     "release:minor": "node scripts/version-bump.js minor --release",
-    "release:major": "node scripts/version-bump.js major --release"
+    "release:major": "node scripts/version-bump.js major --release",
+    "release:create": "node scripts/create-release.js"
   },
   "keywords": [
     "logger",
