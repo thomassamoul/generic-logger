@@ -1,6 +1,6 @@
 {
   "name": "@thomassamoul/generic-logger",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A generic, customizable logging library that works across Browser, Node.js, React, and React Native without initializing third-party dependencies",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -75,4 +75,3 @@
   },
   "dependencies": {}
 }
-
