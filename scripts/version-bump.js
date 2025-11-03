@@ -81,6 +81,7 @@ function checkWorkingDirectory() {
 
 function createRelease(version) {
   const tagName = `v${version}`;
+  const releaseBranch = `release/${version}`;
   
   // Check if tag already exists
   try {
@@ -93,7 +94,47 @@ function createRelease(version) {
     // Tag doesn't exist, continue
   }
   
-  // Check working directory
+  // Get current branch
+  let currentBranch;
+  try {
+    currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+  } catch (error) {
+    console.error('Failed to get current branch:', error.message);
+    process.exit(1);
+  }
+  
+  console.log(`📍 Current branch: ${currentBranch}`);
+  
+  // Check if release branch already exists locally
+  let branchExists = false;
+  try {
+    execSync(`git rev-parse --verify "${releaseBranch}" > /dev/null 2>&1`, { stdio: 'ignore' });
+    branchExists = true;
+  } catch {
+    // Branch doesn't exist, that's fine
+  }
+  
+  // Check if release branch exists on remote
+  let remoteBranchExists = false;
+  try {
+    execSync(`git ls-remote --heads origin "${releaseBranch}" > /dev/null 2>&1`, { stdio: 'ignore' });
+    remoteBranchExists = true;
+  } catch {
+    // Branch doesn't exist on remote, that's fine
+  }
+  
+  // Create or switch to release branch
+  if (branchExists) {
+    console.log(`ℹ️  Release branch ${releaseBranch} already exists locally.`);
+    execSync(`git checkout ${releaseBranch}`, { stdio: 'inherit' });
+    console.log(`✓ Switched to branch: ${releaseBranch}`);
+  } else {
+    // Create branch from current branch
+    execSync(`git checkout -b ${releaseBranch}`, { stdio: 'inherit' });
+    console.log(`✓ Created and switched to branch: ${releaseBranch}`);
+  }
+  
+  // Check working directory for version changes
   const hasVersionChanges = checkWorkingDirectory();
   
   // Always ensure package.json is staged before checking/committing
@@ -117,7 +158,7 @@ function createRelease(version) {
     }
   }
   
-  // Always create tag (on current HEAD)
+  // Always create tag (on current HEAD of release branch)
   try {
     // Check if tag exists first
     try {
@@ -133,21 +174,19 @@ function createRelease(version) {
     process.exit(1);
   }
   
-  // Push commit (if there was a new commit or unpushed commits)
+  // Push release branch
   try {
-    // Check if there are unpushed commits
-    const localCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-    const remoteCommit = execSync('git rev-parse origin/main 2>/dev/null || echo ""', { encoding: 'utf8' }).trim();
-    
-    if (localCommit !== remoteCommit || hasVersionChanges) {
-      execSync('git push origin main', { stdio: 'inherit' });
-      console.log(`✓ Pushed commit to main`);
+    if (remoteBranchExists) {
+      console.log(`ℹ️  Release branch ${releaseBranch} already exists on remote.`);
+      execSync(`git push origin ${releaseBranch}`, { stdio: 'inherit' });
+      console.log(`✓ Pushed release branch: ${releaseBranch}`);
     } else {
-      console.log('ℹ️  No new commits to push');
+      execSync(`git push -u origin ${releaseBranch}`, { stdio: 'inherit' });
+      console.log(`✓ Pushed release branch: ${releaseBranch} (with upstream)`);
     }
   } catch (error) {
-    console.error('Failed to push commit:', error.message);
-    console.log('\n💡 You may need to push manually: git push origin main');
+    console.error('Failed to push release branch:', error.message);
+    console.log(`\n💡 You may need to push manually: git push -u origin ${releaseBranch}`);
   }
   
   // Always push tag
@@ -167,13 +206,37 @@ function createRelease(version) {
     process.exit(1);
   }
   
+  // Switch back to original branch (or main if release branch)
+  if (currentBranch !== releaseBranch) {
+    try {
+      execSync(`git checkout ${currentBranch}`, { stdio: 'inherit' });
+      console.log(`✓ Switched back to branch: ${currentBranch}`);
+    } catch (error) {
+      console.log(`⚠️  Could not switch back to ${currentBranch}. You may need to switch manually.`);
+    }
+  } else {
+    // If we were already on a release branch, switch to main
+    try {
+      execSync('git checkout main', { stdio: 'inherit' });
+      console.log(`✓ Switched to branch: main`);
+    } catch (error) {
+      console.log(`⚠️  Could not switch to main. You may need to switch manually.`);
+    }
+  }
+  
   console.log(`\n🎉 Release ${tagName} created and pushed!`);
-  console.log(`📦 The GitHub workflow will now:`);
+  console.log(`📦 Release branch: ${releaseBranch}`);
+  console.log(`📦 Tag: ${tagName}`);
+  console.log(`\n📦 The GitHub workflow will now:`);
   console.log(`   1. Verify version matches`);
   console.log(`   2. Run tests`);
   console.log(`   3. Build package`);
   console.log(`   4. Publish to npm`);
   console.log(`   5. Create GitHub release`);
+  console.log(`\n💡 Optional: Merge release branch to main:`);
+  console.log(`   git checkout main`);
+  console.log(`   git merge ${releaseBranch}`);
+  console.log(`   git push origin main`);
 }
 
 function main() {
