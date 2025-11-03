@@ -45,10 +45,34 @@ function updatePackageJson(newVersion) {
   return packageJson;
 }
 
-function createGitTag(version) {
+function checkWorkingDirectory() {
+  const status = execSync('git status --porcelain', { encoding: 'utf8' });
+  const files = status.trim().split('\n').filter(line => line.trim());
+  
+  // Filter out only package.json and package-lock.json changes
+  const otherFiles = files.filter(line => {
+    const file = line.trim().substring(3).trim();
+    return file !== 'package.json' && file !== 'package-lock.json';
+  });
+  
+  if (otherFiles.length > 0) {
+    console.log('⚠️  Warning: You have uncommitted changes besides package.json:');
+    otherFiles.forEach(line => console.log(`   ${line.trim()}`));
+    console.log('\nPlease commit or stash them first.');
+    process.exit(1);
+  }
+  
+  return files.filter(line => {
+    const file = line.trim().substring(3).trim();
+    return file === 'package.json' || file === 'package-lock.json';
+  }).length > 0;
+}
+
+function createRelease(version) {
   const tagName = `v${version}`;
+  
+  // Check if tag already exists
   try {
-    // Check if tag already exists
     execSync(`git rev-parse -q --verify "refs/tags/${tagName}" > /dev/null 2>&1`, { stdio: 'ignore' });
     throw new Error(`Tag ${tagName} already exists!`);
   } catch (error) {
@@ -58,23 +82,62 @@ function createGitTag(version) {
     // Tag doesn't exist, continue
   }
   
-  // Check if there are uncommitted changes
-  const status = execSync('git status --porcelain', { encoding: 'utf8' });
-  if (status.trim()) {
-    console.log('⚠️  Warning: You have uncommitted changes. Please commit them first.');
-    console.log('\nTo proceed:');
-    console.log(`  1. Commit your changes: git add . && git commit -m "Prepare release ${tagName}"`);
-    console.log(`  2. Push to GitHub: git push origin main`);
-    console.log(`  3. Create tag: git tag ${tagName}`);
-    console.log(`  4. Push tag: git push origin ${tagName}`);
+  // Check working directory
+  const hasVersionChanges = checkWorkingDirectory();
+  
+  if (!hasVersionChanges) {
+    console.log('ℹ️  No changes to package.json detected. Version may already be committed.');
+  }
+  
+  // Commit version change if needed
+  if (hasVersionChanges) {
+    try {
+      execSync('git add package.json package-lock.json', { stdio: 'inherit' });
+      execSync(`git commit -m "chore: bump version to ${version}"`, { stdio: 'inherit' });
+      console.log(`✓ Committed version change`);
+    } catch (error) {
+      console.error('Failed to commit version change:', error.message);
+      process.exit(1);
+    }
+  }
+  
+  // Create tag
+  try {
+    execSync(`git tag -a ${tagName} -m "Release ${tagName}"`, { stdio: 'inherit' });
+    console.log(`✓ Created tag: ${tagName}`);
+  } catch (error) {
+    console.error('Failed to create tag:', error.message);
     process.exit(1);
   }
   
-  // Create and push tag
-  execSync(`git tag ${tagName}`, { stdio: 'inherit' });
-  console.log(`\n✓ Created tag: ${tagName}`);
-  console.log(`\nTo publish, push the tag:`);
-  console.log(`  git push origin ${tagName}`);
+  // Push commit (if there was a new commit)
+  if (hasVersionChanges) {
+    try {
+      execSync('git push origin main', { stdio: 'inherit' });
+      console.log(`✓ Pushed commit to main`);
+    } catch (error) {
+      console.error('Failed to push commit:', error.message);
+      console.log('\n💡 You may need to push manually: git push origin main');
+    }
+  }
+  
+  // Push tag
+  try {
+    execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
+    console.log(`✓ Pushed tag ${tagName}`);
+  } catch (error) {
+    console.error('Failed to push tag:', error.message);
+    console.log(`\n💡 You may need to push manually: git push origin ${tagName}`);
+    process.exit(1);
+  }
+  
+  console.log(`\n🎉 Release ${tagName} created and pushed!`);
+  console.log(`📦 The GitHub workflow will now:`);
+  console.log(`   1. Verify version matches`);
+  console.log(`   2. Run tests`);
+  console.log(`   3. Build package`);
+  console.log(`   4. Publish to npm`);
+  console.log(`   5. Create GitHub release`);
 }
 
 function main() {
@@ -100,19 +163,25 @@ function main() {
   updatePackageJson(newVersion);
   console.log(`✓ Updated package.json to version ${newVersion}`);
   
-  console.log('\n📝 Next steps:');
-  console.log(`  1. Commit the version change:`);
-  console.log(`     git add package.json && git commit -m "Bump version to ${newVersion}"`);
-  console.log(`  2. Push to GitHub:`);
-  console.log(`     git push origin main`);
-  console.log(`  3. Create and push tag (this will trigger publish workflow):`);
-  console.log(`     git tag v${newVersion}`);
-  console.log(`     git push origin v${newVersion}`);
-  console.log('\n  Or run this script with --auto-tag flag to auto-create the tag:');
-  console.log(`     node scripts/version-bump.js ${versionType} --auto-tag`);
+  // Check if user wants full automation
+  const autoRelease = args.includes('--release') || args.includes('-r');
   
-  if (args.includes('--auto-tag')) {
-    createGitTag(newVersion);
+  if (autoRelease) {
+    console.log('\n🚀 Starting automated release process...\n');
+    createRelease(newVersion);
+  } else {
+    console.log('\n📝 Next steps:');
+    console.log(`  1. Commit the version change:`);
+    console.log(`     git add package.json && git commit -m "chore: bump version to ${newVersion}"`);
+    console.log(`  2. Push to GitHub:`);
+    console.log(`     git push origin main`);
+    console.log(`  3. Create and push tag (this will trigger publish workflow):`);
+    console.log(`     git tag -a v${newVersion} -m "Release v${newVersion}"`);
+    console.log(`     git push origin v${newVersion}`);
+    console.log('\n  Or run with --release flag to automate everything:');
+    console.log(`     npm run version:patch -- --release`);
+    console.log(`     npm run version:minor -- --release`);
+    console.log(`     npm run version:major -- --release`);
   }
 }
 
