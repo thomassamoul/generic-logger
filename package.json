@@ -45,16 +45,16 @@
     "react-native",
     "typescript"
   ],
-  "author": "",
+  "author": "Thomas Samoul <thomassamoul@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/thomassamoul/generic-logger.git"
   },
   "bugs": {
-    "url": ""
+    "url": "https://github.com/thomassamoul/generic-logger/issues"
   },
-  "homepage": "",
+  "homepage": "https://github.com/thomassamoul/generic-logger#readme",
   "engines": {
     "node": ">=20.0.0"
   },

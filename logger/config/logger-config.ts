@@ -28,9 +28,25 @@ function getEnvironment(): LoggerEnvironment {
 }
 
 /**
- * Get logger configuration based on environment (example helper)
- * NOTE: This is just an example. Users should create their own configuration
- * and use registerAdapter() to add adapters with their own instances.
+ * Get logger configuration based on environment (example helper).
+ *
+ * NOTE: This is just an example helper function. Users should create their
+ * own configuration and use registerAdapter() to add adapters with their
+ * own pre-initialized instances. This function is provided for reference only.
+ *
+ * The function automatically detects the environment and returns a basic
+ * configuration. Adapters that require third-party instances (Sentry, DataDog, Winston)
+ * will be disabled by default since users must provide their own instances.
+ *
+ * @returns {LoggerRepositoryConfig} A basic logger configuration based on environment
+ *
+ * @example
+ * ```typescript
+ * // Example usage (not recommended for production)
+ * const config = getLoggerConfig();
+ * const repo = LoggerRepository.getInstance(config);
+ * // Note: You still need to register adapters with your own instances
+ * ```
  */
 export function getLoggerConfig(): LoggerRepositoryConfig {
   const env = getEnvironment();

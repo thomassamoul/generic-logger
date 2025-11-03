@@ -1,18 +1,67 @@
 /**
  * File Logger Adapter
  *
- * File system logger - users can provide custom file writer functions
- * Works across Browser (download), Node.js (fs), and React Native (requires custom writer)
+ * File system logger that allows users to provide custom file writer functions.
+ * This adapter is platform-agnostic and works across:
+ * - Browser: Requires custom writer (can trigger downloads)
+ * - Node.js: Use fs-based writer
+ * - React Native: Requires platform-specific writer
+ *
+ * If no fileWriter is provided, logs are buffered in memory and can be
+ * retrieved using getBufferedLogs().
+ *
+ * @example
+ * ```typescript
+ * // Node.js example
+ * import * as fs from 'fs/promises';
+ * const adapter = new FileLoggerAdapter();
+ * await adapter.initialize({
+ *   enabled: true,
+ *   fileWriter: async (message, level, context) => {
+ *     await fs.appendFile('app.log', JSON.stringify({ message, level, context }) + '\n');
+ *   }
+ * });
+ * ```
  */
 
 import { ILoggerAdapter } from '../core/logger-adapter.interface';
 import { FileAdapterConfig, LogContext, LoggerAdapterConfig, LogLevel } from '../types';
 
+/**
+ * Adapter for file-based logging with custom writer functions.
+ *
+ * This adapter supports multiple output formats (JSON, plain text) and
+ * allows users to provide their own file writing implementation, making
+ * it compatible with any platform or file system.
+ *
+ * @class FileLoggerAdapter
+ * @extends {ILoggerAdapter<void>}
+ */
 export class FileLoggerAdapter extends ILoggerAdapter<void> {
   private config: FileAdapterConfig = { enabled: false };
   private enabled = false;
   private logBuffer: string[] = [];
 
+  /**
+   * Initialize the file adapter with configuration.
+   *
+   * If no fileWriter is provided, logs will be buffered in memory.
+   * Users should provide a fileWriter function for actual file writing.
+   *
+   * @param {LoggerAdapterConfig} config - Configuration object
+   * @returns {Promise<void>} Resolves immediately
+   *
+   * @example
+   * ```typescript
+   * await adapter.initialize({
+   *   enabled: true,
+   *   formats: ['json', 'log'],
+   *   fileWriter: async (message, level, context) => {
+   *     // Your file writing logic
+   *   }
+   * });
+   * ```
+   */
   async initialize(config: LoggerAdapterConfig): Promise<void> {
     this.config = config as unknown as FileAdapterConfig;
     this.enabled = this.config.enabled;
@@ -27,10 +76,35 @@ export class FileLoggerAdapter extends ILoggerAdapter<void> {
     }
   }
 
+  /**
+   * Check if the adapter is enabled.
+   *
+   * @returns {boolean} True if the adapter is enabled
+   */
   isEnabled(): boolean {
     return this.enabled;
   }
 
+  /**
+   * Log a message to file (or buffer if no fileWriter provided).
+   *
+   * Logs are formatted according to the configured formats (JSON, plain text, or both).
+   * If a fileWriter is provided, it's called asynchronously (fire-and-forget).
+   * If no fileWriter, logs are buffered in memory.
+   *
+   * @param {LogLevel} level - The log level
+   * @param {string} message - The log message
+   * @param {LogContext} [context] - Optional context information
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * adapter.log('info', 'User logged in', {
+   *   timestamp: new Date(),
+   *   data: { userId: 123 }
+   * });
+   * ```
+   */
   log(level: LogLevel, message: string, context?: LogContext): void {
     if (!this.enabled) return;
 
@@ -98,6 +172,11 @@ export class FileLoggerAdapter extends ILoggerAdapter<void> {
     }
   }
 
+  /**
+   * Destroy the adapter and clear the log buffer.
+   *
+   * @returns {Promise<void>} Resolves immediately
+   */
   async destroy(): Promise<void> {
     this.enabled = false;
     // Clear buffer on destroy
@@ -105,21 +184,50 @@ export class FileLoggerAdapter extends ILoggerAdapter<void> {
   }
 
   /**
-   * Get buffered logs (useful if no fileWriter was provided)
+   * Get all buffered logs as a single string.
+   *
+   * Useful when no fileWriter was provided and you want to retrieve
+   * the logs from memory. Returns an empty string if buffer is empty.
+   *
+   * @returns {string} All buffered log entries joined together
+   *
+   * @example
+   * ```typescript
+   * const logs = adapter.getBufferedLogs();
+   * console.log(logs); // Output all buffered logs
+   * ```
    */
   getBufferedLogs(): string {
     return this.logBuffer.join('');
   }
 
   /**
-   * Clear buffered logs
+   * Clear all buffered logs from memory.
+   *
+   * This does not affect logs that were written via fileWriter.
+   * Useful for managing memory usage when buffering logs.
+   *
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * adapter.clearBuffer(); // Clear memory buffer
+   * ```
    */
   clearBuffer(): void {
     this.logBuffer = [];
   }
 
   /**
-   * Format log message with context
+   * Format a log message with context information.
+   *
+   * Combines the message with tag, file, and function context
+   * into a readable format.
+   *
+   * @private
+   * @param {string} message - The log message
+   * @param {LogContext} [context] - Optional context information
+   * @returns {string} Formatted message string
    */
   private formatMessage(message: string, context?: LogContext): string {
     const parts: string[] = [];

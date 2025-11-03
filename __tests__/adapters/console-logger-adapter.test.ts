@@ -38,48 +38,38 @@ describe('ConsoleLoggerAdapter', () => {
 
     it('should log debug messages', () => {
       adapter.log('debug', 'test message');
-      expect(mockConsole.debug).toHaveBeenCalledWith(
-        expect.stringContaining('[DEBUG]'),
-        expect.stringContaining('test message'),
-        ''
-      );
+      const callArgs = mockConsole.debug.mock.calls[0];
+      expect(callArgs[0]).toContain('[DEBUG]');
+      expect(callArgs[0]).toContain('test message');
     });
 
     it('should log info messages', () => {
       adapter.log('info', 'test message');
-      expect(mockConsole.info).toHaveBeenCalledWith(
-        expect.stringContaining('[INFO]'),
-        expect.stringContaining('test message'),
-        ''
-      );
+      const callArgs = mockConsole.info.mock.calls[0];
+      expect(callArgs[0]).toContain('[INFO]');
+      expect(callArgs[0]).toContain('test message');
     });
 
     it('should log warn messages', () => {
       adapter.log('warn', 'test message');
-      expect(mockConsole.warn).toHaveBeenCalledWith(
-        expect.stringContaining('[WARN]'),
-        expect.stringContaining('test message'),
-        ''
-      );
+      const callArgs = mockConsole.warn.mock.calls[0];
+      expect(callArgs[0]).toContain('[WARN]');
+      expect(callArgs[0]).toContain('test message');
     });
 
     it('should log error messages', () => {
       adapter.log('error', 'test message');
-      expect(mockConsole.error).toHaveBeenCalledWith(
-        expect.stringContaining('[ERROR]'),
-        expect.stringContaining('test message'),
-        '',
-        ''
-      );
+      const callArgs = mockConsole.error.mock.calls[0];
+      expect(callArgs[0]).toContain('[ERROR]');
+      expect(callArgs[0]).toContain('test message');
     });
 
     it('should include context data in logs', () => {
       adapter.log('info', 'test message', { data: { key: 'value' } });
-      expect(mockConsole.info).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(String),
-        { key: 'value' }
-      );
+      const callArgs = mockConsole.info.mock.calls[0];
+      expect(callArgs[0]).toContain('[INFO]');
+      expect(callArgs[0]).toContain('test message');
+      expect(callArgs[1]).toEqual({ key: 'value' });
     });
 
     it('should handle error objects in context', () => {

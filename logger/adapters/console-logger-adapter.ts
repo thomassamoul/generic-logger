@@ -124,6 +124,26 @@ export class ConsoleLoggerAdapter extends ILoggerAdapter<void> {
     return this.enabled;
   }
 
+  /**
+   * Log a message to the console.
+   *
+   * This method formats the message with context information and logs it
+   * using the appropriate console method (debug, info, warn, error).
+   * Colorization is applied if enabled in the configuration.
+   *
+   * @param {LogLevel} level - The log level ('debug' | 'info' | 'warn' | 'error')
+   * @param {string} message - The log message
+   * @param {LogContext} [context] - Optional context with error, tags, and metadata
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * adapter.log('info', 'User logged in', {
+   *   tag: '[Auth]',
+   *   data: { userId: 123 }
+   * });
+   * ```
+   */
   log(level: LogLevel, message: string, context?: LogContext): void {
     if (!this.enabled) return;
 
@@ -156,42 +176,63 @@ export class ConsoleLoggerAdapter extends ILoggerAdapter<void> {
       // Log based on level using native console methods
       switch (level) {
         case 'debug':
+          // eslint-disable-next-line no-console
           console.debug(`${prefix} ${timeStr} ${formattedMessage}`, logEntry.data || '');
           break;
         case 'info':
+          // eslint-disable-next-line no-console
           console.info(`${prefix} ${timeStr} ${formattedMessage}`, logEntry.data || '');
           break;
         case 'warn':
+          // eslint-disable-next-line no-console
           console.warn(`${prefix} ${timeStr} ${formattedMessage}`, logEntry.data || '');
           if (context?.error) {
+            // eslint-disable-next-line no-console
             console.warn('Error:', context.error);
           }
           break;
         case 'error':
           if (context?.error instanceof Error) {
+            // eslint-disable-next-line no-console
             console.error(`${prefix} ${timeStr} ${formattedMessage}`, {
               message: context.error.message,
               stack: context.error.stack,
               data: logEntry.data,
             });
           } else {
+            // eslint-disable-next-line no-console
             console.error(`${prefix} ${timeStr} ${formattedMessage}`, context?.error || '', logEntry.data || '');
           }
           break;
       }
     } catch (error) {
       // Fail silently for console adapter
+      // eslint-disable-next-line no-console
       console.warn('Console logger adapter error:', error);
     }
   }
 
+  /**
+   * Destroy the adapter and disable logging.
+   *
+   * @returns {Promise<void>} Resolves immediately
+   */
   async destroy(): Promise<void> {
     this.enabled = false;
     this.instance = undefined;
   }
 
   /**
-   * Format log message with context
+   * Format a log message with context information.
+   *
+   * Combines the message with tag, file, and function context into
+   * a readable format. Automatically extracts caller information if
+   * no explicit context is provided.
+   *
+   * @private
+   * @param {string} message - The log message
+   * @param {LogContext} [context] - Optional context information
+   * @returns {string} Formatted message string
    */
   private formatMessage(message: string, context?: LogContext): string {
     const parts: string[] = [];
@@ -235,7 +276,11 @@ export class ConsoleLoggerAdapter extends ILoggerAdapter<void> {
   }
 
   /**
-   * Format timestamp for display
+   * Format a timestamp for display in log messages.
+   *
+   * @private
+   * @param {Date} timestamp - The timestamp to format
+   * @returns {string} ISO formatted timestamp string
    */
   private formatTimestamp(timestamp: Date): string {
     return timestamp.toISOString();
