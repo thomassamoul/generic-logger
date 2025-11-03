@@ -1,4 +1,4 @@
-# @thomas/generic-logger
+# @thomassamoul/generic-logger
 
 A generic, customizable logging library that works across **Browser**, **Node.js**, **React**, and **React Native** without initializing third-party dependencies. Users provide their own logging library instances, making this a truly generic solution.
 
@@ -16,7 +16,7 @@ A generic, customizable logging library that works across **Browser**, **Node.js
 ## Installation
 
 ```bash
-npm install @thomas/generic-logger
+npm install @thomassamoul/generic-logger
 ```
 
 ## Quick Start
@@ -24,7 +24,7 @@ npm install @thomas/generic-logger
 ### Basic Usage (Console Only)
 
 ```typescript
-import { logger, ConsoleLoggerAdapter } from '@thomas/generic-logger';
+import { logger, ConsoleLoggerAdapter } from '@thomassamoul/generic-logger';
 
 // Register the console adapter (no dependencies required)
 await logger.registerAdapter(
@@ -43,7 +43,7 @@ logger.error('Error occurred', new Error('Something went wrong'));
 ### With Sentry (Browser/React Native/Node)
 
 ```typescript
-import { logger, SentryLoggerAdapter } from '@thomas/generic-logger';
+import { logger, SentryLoggerAdapter } from '@thomassamoul/generic-logger';
 import * as Sentry from '@sentry/react-native'; // or @sentry/browser, @sentry/node
 
 // Initialize Sentry yourself
@@ -65,7 +65,7 @@ logger.error('Error logged to Sentry', error);
 ### With Winston (Node.js)
 
 ```typescript
-import { logger, WinstonLoggerAdapter } from '@thomas/generic-logger';
+import { logger, WinstonLoggerAdapter } from '@thomassamoul/generic-logger';
 import winston from 'winston';
 
 // Create your Winston logger
@@ -91,7 +91,7 @@ logger.info('This will be logged by Winston');
 ### With DataDog
 
 ```typescript
-import { logger, DataDogLoggerAdapter } from '@thomas/generic-logger';
+import { logger, DataDogLoggerAdapter } from '@thomassamoul/generic-logger';
 import { DatadogProvider, Configuration } from '@datadog/mobile-react-native';
 
 // Initialize DataDog yourself
@@ -111,7 +111,7 @@ logger.info('Logged to DataDog');
 ### Multiple Adapters
 
 ```typescript
-import { logger, ConsoleLoggerAdapter, SentryLoggerAdapter } from '@thomas/generic-logger';
+import { logger, ConsoleLoggerAdapter, SentryLoggerAdapter } from '@thomassamoul/generic-logger';
 import * as Sentry from '@sentry/react-native';
 
 Sentry.init({ dsn: 'your-dsn' });
@@ -138,7 +138,7 @@ logger.info('Logged to both console and Sentry');
 The `LoggerRepository` is the central facade that manages multiple adapters and handles sanitization:
 
 ```typescript
-import { LoggerRepository } from '@thomas/generic-logger';
+import { LoggerRepository } from '@thomassamoul/generic-logger';
 
 const repo = LoggerRepository.getInstance({
   sanitization: {
@@ -168,7 +168,7 @@ Adapters are implementations that connect to specific logging libraries. This pa
 You can create custom adapters for any logging library:
 
 ```typescript
-import { ILoggerAdapter, LogLevel, LogContext } from '@thomas/generic-logger';
+import { ILoggerAdapter, LogLevel, LogContext } from '@thomassamoul/generic-logger';
 
 class MyCustomAdapter extends ILoggerAdapter<MyLoggerInstance> {
   private myLogger: MyLoggerInstance;
@@ -210,7 +210,7 @@ The logger includes built-in sanitization to prevent logging sensitive informati
 The `DefaultSanitizer` automatically redacts common sensitive fields:
 
 ```typescript
-import { logger, DefaultSanitizer } from '@thomas/generic-logger';
+import { logger, DefaultSanitizer } from '@thomassamoul/generic-logger';
 
 logger.info('User data', {
   data: {
@@ -225,7 +225,7 @@ logger.info('User data', {
 ### Custom Sanitizer
 
 ```typescript
-import { BaseSanitizer } from '@thomas/generic-logger';
+import { BaseSanitizer } from '@thomassamoul/generic-logger';
 
 class CustomSanitizer extends BaseSanitizer {
   sanitize(data: unknown): unknown {
@@ -240,7 +240,7 @@ class CustomSanitizer extends BaseSanitizer {
 }
 
 // Register for a specific tag
-import { sanitizerRegistry } from '@thomas/generic-logger';
+import { sanitizerRegistry } from '@thomassamoul/generic-logger';
 sanitizerRegistry.register('Auth', new CustomSanitizer());
 
 // Use it
@@ -253,7 +253,7 @@ logger.info('Login attempt', {
 ### Per-Call Sanitization
 
 ```typescript
-import { DefaultSanitizer } from '@thomas/generic-logger';
+import { DefaultSanitizer } from '@thomassamoul/generic-logger';
 
 // Use a specific sanitizer for this call
 logger.info('Message', {
@@ -273,7 +273,7 @@ logger.info('Safe message', {
 ### Browser
 
 ```typescript
-import { logger, ConsoleLoggerAdapter } from '@thomas/generic-logger';
+import { logger, ConsoleLoggerAdapter } from '@thomassamoul/generic-logger';
 
 // Console adapter works in browser
 await logger.registerAdapter('console', new ConsoleLoggerAdapter(), {
@@ -293,7 +293,7 @@ await logger.registerAdapter('sentry', new SentryLoggerAdapter(), {
 ### Node.js
 
 ```typescript
-import { logger, ConsoleLoggerAdapter, WinstonLoggerAdapter, FileLoggerAdapter } from '@thomas/generic-logger';
+import { logger, ConsoleLoggerAdapter, WinstonLoggerAdapter, FileLoggerAdapter } from '@thomassamoul/generic-logger';
 import winston from 'winston';
 import * as fs from 'fs/promises';
 
@@ -320,7 +320,7 @@ await logger.registerAdapter('file', new FileLoggerAdapter(), {
 
 ```typescript
 import { useEffect } from 'react';
-import { logger, ConsoleLoggerAdapter } from '@thomas/generic-logger';
+import { logger, ConsoleLoggerAdapter } from '@thomassamoul/generic-logger';
 
 function App() {
   useEffect(() => {
@@ -342,7 +342,7 @@ function App() {
 
 ```typescript
 import { useEffect } from 'react';
-import { logger, ConsoleLoggerAdapter, SentryLoggerAdapter } from '@thomas/generic-logger';
+import { logger, ConsoleLoggerAdapter, SentryLoggerAdapter } from '@thomassamoul/generic-logger';
 import * as Sentry from '@sentry/react-native';
 
 useEffect(() => {
@@ -494,7 +494,7 @@ npm run test:coverage
 ### Testing Your Code
 
 ```typescript
-import { LoggerRepository } from '@thomas/generic-logger';
+import { LoggerRepository } from '@thomassamoul/generic-logger';
 
 describe('MyFeature', () => {
   afterEach(() => {
@@ -520,7 +520,7 @@ import type {
   ILoggerAdapter,
   ISanitizer,
   // ... and more
-} from '@thomas/generic-logger';
+} from '@thomassamoul/generic-logger';
 ```
 
 ## Contributing

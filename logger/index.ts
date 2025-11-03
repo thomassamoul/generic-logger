@@ -1,7 +1,7 @@
 /**
  * Generic Logger Package
  *
- * Main entry point for the @thomas/generic-logger package.
+ * Main entry point for the @thomassamoul/generic-logger package.
  *
  * This module exports all public APIs including:
  * - Logger singleton instance
@@ -14,7 +14,7 @@
  * @packageDocumentation
  * @example
  * ```typescript
- * import { logger, ConsoleLoggerAdapter } from '@thomas/generic-logger';
+ * import { logger, ConsoleLoggerAdapter } from '@thomassamoul/generic-logger';
  *
  * // Register an adapter
  * await logger.registerAdapter('console', new ConsoleLoggerAdapter(), {
@@ -35,7 +35,7 @@
  *
  * @example
  * ```typescript
- * import { logger } from '@thomas/generic-logger';
+ * import { logger } from '@thomassamoul/generic-logger';
  * logger.info('Hello world');
  * ```
  */
@@ -49,7 +49,7 @@ export { logger } from './logger-instance';
  *
  * @example
  * ```typescript
- * import { LoggerRepository } from '@thomas/generic-logger';
+ * import { LoggerRepository } from '@thomassamoul/generic-logger';
  * const repo = LoggerRepository.getInstance();
  * await repo.registerAdapter('console', adapter, config);
  * ```
@@ -63,7 +63,7 @@ export { LoggerRepository } from './core/logger-repository';
  *
  * @example
  * ```typescript
- * import { ILoggerAdapter } from '@thomas/generic-logger';
+ * import { ILoggerAdapter } from '@thomassamoul/generic-logger';
  * class MyAdapter extends ILoggerAdapter {
  *   // Implement interface methods
  * }
@@ -78,7 +78,7 @@ export { ILoggerAdapter } from './core/logger-adapter.interface';
  *
  * @example
  * ```typescript
- * import { BaseSanitizer } from '@thomas/generic-logger';
+ * import { BaseSanitizer } from '@thomassamoul/generic-logger';
  * class MySanitizer extends BaseSanitizer {
  *   sanitize(data: unknown): unknown {
  *     // Your sanitization logic

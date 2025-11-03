@@ -10,7 +10,7 @@
  *
  * @example
  * ```typescript
- * import { logger, ConsoleLoggerAdapter } from '@thomas/generic-logger';
+ * import { logger, ConsoleLoggerAdapter } from '@thomassamoul/generic-logger';
  *
  * // Register an adapter
  * await logger.registerAdapter('console', new ConsoleLoggerAdapter(), {
@@ -214,7 +214,7 @@ class LoggerSingleton {
  *
  * @example
  * ```typescript
- * import { logger } from '@thomas/generic-logger';
+ * import { logger } from '@thomassamoul/generic-logger';
  * logger.info('Hello world');
  * ```
  */

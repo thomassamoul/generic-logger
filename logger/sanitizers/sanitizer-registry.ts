@@ -121,7 +121,7 @@ class SanitizerRegistry {
  *
  * @example
  * ```typescript
- * import { sanitizerRegistry } from '@thomas/generic-logger';
+ * import { sanitizerRegistry } from '@thomassamoul/generic-logger';
  * sanitizerRegistry.register('Auth', new CustomSanitizer());
  * ```
  */

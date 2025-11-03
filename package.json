@@ -1,5 +1,5 @@
 {
-  "name": "@thomas/generic-logger",
+  "name": "@thomassamoul/generic-logger",
   "version": "0.1.0",
   "description": "A generic, customizable logging library that works across Browser, Node.js, React, and React Native without initializing third-party dependencies",
   "main": "./dist/cjs/index.js",
