@@ -10,16 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Manual release creation script and workflow dispatch option for creating releases for existing tags
 
-## [0.1.2] - 2025-01-XX
+## [0.1.2] - 2025-11-05
 
 ### Added
 - Project visualization image in README
+- CHANGELOG.md file with release history
 
 ### Fixed
 - Manual release creation workflow support for existing tags
 - GitHub release permissions to allow automated release creation
+- Release workflow CHANGELOG.md link to point to tag instead of main branch
 
-## [0.1.1] - 2025-01-XX
+## [0.1.1] - 2025-11-03
 
 ### Added
 - Automated version bumping script with release branch creation
@@ -32,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Version bump script to properly detect package.json changes
 - Tag creation and pushing workflow
 
-## [0.1.0] - 2025-01-XX
+## [0.1.0] - 2025-11-03
 
 ### Added
 - Initial release of generic logger package
