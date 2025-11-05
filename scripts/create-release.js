@@ -104,7 +104,7 @@ npm install @thomassamoul/generic-logger@${version}
 \`\`\`
 
 ### Changes
-See [CHANGELOG.md](https://github.com/thomassamoul/generic-logger/blob/main/CHANGELOG.md) for detailed changes.
+See [CHANGELOG.md](https://github.com/thomassamoul/generic-logger/blob/${tag}/CHANGELOG.md) for detailed changes.
 
 ---
 *Manually created for tag ${tag}*
