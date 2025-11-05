@@ -1,3 +1,5 @@
+<img width="1200" height="627" alt="ChatGPT Image Nov 5, 2025, 01_43_49 AM (1)" src="https://github.com/user-attachments/assets/6ba56a56-3a5f-4b0e-a5e6-de8b7acba0ce" />
+
 # @thomassamoul/generic-logger
 
 A generic, customizable logging library that works across **Browser**, **Node.js**, **React**, and **React Native** without initializing third-party dependencies. Users provide their own logging library instances, making this a truly generic solution.
