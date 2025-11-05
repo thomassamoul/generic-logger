@@ -93,7 +93,7 @@ jobs:
             ```
 
             ### Changes
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for detailed changes.
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/CHANGELOG.md) for detailed changes.
 
             ---
             *Automatically generated from tag ${{ steps.version.outputs.tag }}*
