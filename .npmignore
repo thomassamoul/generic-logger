@@ -1,6 +1,7 @@
 logger/
 *.ts
 !*.d.ts
+*.js.map
 tsconfig*.json
 jest.config.js
 .gitignore
