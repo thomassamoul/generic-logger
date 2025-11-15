@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Project structure guidelines in `.cursorrules`
+- CONTRIBUTING.md with git workflow documentation
+- Release highlights extraction from CHANGELOG.md
+
+### Changed
+- GitHub Actions publish workflow now extracts highlights from CHANGELOG for releases
+- Release body format includes highlights section at top, CHANGELOG link at bottom
+
+### Documentation
+- Added `.cursorrules` with project structure guidelines
+- Added CONTRIBUTING.md with detailed git workflow (branch → commits → PR → squash merge)
+- Updated release scripts to automatically extract highlights from CHANGELOG
+
 ## [0.2.0] - 2025-11-15
 
 ### Added
