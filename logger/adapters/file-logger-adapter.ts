@@ -25,6 +25,7 @@
  */
 
 import { ILoggerAdapter } from '../core/logger-adapter.interface';
+import { FormattedOutput } from '../formatters';
 import { FileAdapterConfig, LogContext, LoggerAdapterConfig, LogLevel } from '../types';
 
 /**
@@ -109,54 +110,80 @@ export class FileLoggerAdapter extends ILoggerAdapter<void> {
     if (!this.enabled) return;
 
     try {
-      // Format message with context
-      const formattedMessage = this.formatMessage(message, context);
-      const timestamp = context?.timestamp || new Date();
+      // Check if formatted output is available in context metadata
+      // (provided by repository when formatters are configured)
+      const formattedOutput = (context?.metadata as any)?._formattedOutput as
+        | FormattedOutput
+        | undefined;
 
-      // Build log entry
-      const logEntry = {
-        timestamp: timestamp.toISOString(),
-        level,
-        message: formattedMessage,
-        data: context?.data,
-        error: context?.error
-          ? context.error instanceof Error
-            ? {
-                message: context.error.message,
-                stack: context.error.stack,
-                name: context.error.name,
-              }
-            : context.error
-          : undefined,
-        metadata: context?.metadata,
-      };
-
-      // Format log entry as string
       const formats = this.config.formats || ['json'];
       const logLines: string[] = [];
 
-      if (formats.includes('json')) {
-        logLines.push(JSON.stringify(logEntry));
-      }
-
-      if (formats.includes('log')) {
-        const logLine = `[${logEntry.timestamp}] [${logEntry.level.toUpperCase()}] ${logEntry.message}`;
-        logLines.push(logLine);
-        if (logEntry.error) {
-          logLines.push(`  Error: ${JSON.stringify(logEntry.error)}`);
+      // Use formatted output if available, otherwise format manually
+      if (formattedOutput) {
+        if (formats.includes('json') && formattedOutput.json) {
+          logLines.push(JSON.stringify(formattedOutput.json));
         }
-        if (logEntry.data) {
-          logLines.push(`  Data: ${JSON.stringify(logEntry.data)}`);
+        if (formats.includes('log') && formattedOutput.text) {
+          logLines.push(formattedOutput.text);
+        }
+      } else {
+        // Fallback: format manually if no formatted output available
+        const formattedMessage = this.formatMessage(message, context);
+        const timestamp = context?.timestamp || new Date();
+
+        // Build log entry
+        const logEntry = {
+          timestamp: timestamp.toISOString(),
+          level,
+          message: formattedMessage,
+          data: context?.data,
+          error: context?.error
+            ? context.error instanceof Error
+              ? {
+                  message: context.error.message,
+                  stack: context.error.stack,
+                  name: context.error.name,
+                }
+              : context.error
+            : undefined,
+          metadata: context?.metadata,
+        };
+
+        if (formats.includes('json')) {
+          logLines.push(JSON.stringify(logEntry));
+        }
+
+        if (formats.includes('log')) {
+          const logLine = `[${logEntry.timestamp}] [${logEntry.level.toUpperCase()}] ${logEntry.message}`;
+          logLines.push(logLine);
+          if (logEntry.error) {
+            logLines.push(`  Error: ${JSON.stringify(logEntry.error)}`);
+          }
+          if (logEntry.data) {
+            logLines.push(`  Data: ${JSON.stringify(logEntry.data)}`);
+          }
         }
       }
 
       const logText = logLines.join('\n') + '\n';
+      const formattedMessage = formattedOutput?.text || this.formatMessage(message, context);
 
       // If custom fileWriter is provided, use it (fire and forget - async)
+      // Pass the formatted message and full context
+      // The fileWriter can implement rotation logic based on rotation config
       if (this.config.fileWriter) {
         // Fire and forget - don't await to keep log() synchronous
         this.config
-          .fileWriter(formattedMessage, level, context)
+          .fileWriter(formattedMessage, level, {
+            ...context,
+            // Include formatted output in context for fileWriter to use if needed
+            metadata: {
+              ...context?.metadata,
+              _formattedText: logText,
+              _rotationConfig: this.config.rotation,
+            },
+          })
           .catch((error) => {
             console.warn('FileWriter error:', error);
             // Fallback to buffer if fileWriter fails
