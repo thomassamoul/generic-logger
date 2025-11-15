@@ -82,6 +82,17 @@ jobs:
       - name: Build package
         run: npm run build
 
+      - name: Extract release highlights from CHANGELOG
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          HIGHLIGHTS=$(node scripts/extract-changelog-highlights.js "$VERSION")
+          
+          # Output highlights for GitHub Actions
+          echo "highlights<<EOF" >> $GITHUB_OUTPUT
+          echo "$HIGHLIGHTS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Publish to NPM
         run: npm publish --access public
         # OIDC authentication happens automatically when:
@@ -104,10 +115,12 @@ jobs:
             npm install @thomassamoul/generic-logger@${{ steps.version.outputs.version }}
             ```
 
-            ### Changes
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/CHANGELOG.md) for detailed changes.
+            ${{ steps.changelog.outputs.highlights }}
 
             ---
+
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/CHANGELOG.md) for detailed changes.
+
             *Automatically generated from tag ${{ steps.version.outputs.tag }}*
           draft: false
           prerelease: false
