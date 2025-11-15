@@ -103,5 +103,11 @@ function main() {
   extractHighlights(version);
 }
 
-main();
+// Export for use in other scripts
+if (require.main === module) {
+  main();
+} else {
+  // Export function for use in create-tag-and-release.js
+  module.exports = { extractHighlightsFromChangelog };
+}
 

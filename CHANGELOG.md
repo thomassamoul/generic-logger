@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project structure guidelines in `PROJECT_STRUCTURE.md`
 - CONTRIBUTING.md with git workflow documentation
 - Release highlights extraction from CHANGELOG.md
+- Automated PR creation script (`scripts/create-pr.js`)
+- Automated tag and release script (`scripts/create-tag-and-release.js`)
 
 ### Changed
 - GitHub Actions publish workflow now extracts highlights from CHANGELOG for releases
@@ -20,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `PROJECT_STRUCTURE.md` with project structure guidelines
 - Added CONTRIBUTING.md with detailed git workflow (branch → commits → PR → squash merge)
 - Updated release scripts to automatically extract highlights from CHANGELOG
+- Documented automated PR and release workflows
 
 ## [0.2.0] - 2025-11-15
 
