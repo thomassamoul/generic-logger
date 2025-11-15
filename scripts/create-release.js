@@ -17,10 +17,81 @@ const fs = require('fs');
 const path = require('path');
 
 const packageJsonPath = path.join(__dirname, '..', 'package.json');
+const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
 
 function getPackageVersion() {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   return packageJson.version;
+}
+
+function extractHighlightsFromChangelog(version) {
+  try {
+    if (!fs.existsSync(changelogPath)) {
+      return '### Changes\nSee CHANGELOG.md for detailed changes.';
+    }
+
+    const changelog = fs.readFileSync(changelogPath, 'utf8');
+    
+    // Find the version section
+    const versionRegex = new RegExp(`## \\[${version.replace(/\./g, '\\.')}\\][^#]*`, 's');
+    const match = changelog.match(versionRegex);
+    
+    if (!match) {
+      // Try to find [Unreleased] if version not found
+      const unreleasedMatch = changelog.match(/## \[Unreleased\][^#]*/s);
+      if (unreleasedMatch) {
+        return formatChangelogSection(unreleasedMatch[0], 'Unreleased');
+      }
+      return '### Changes\nSee CHANGELOG.md for detailed changes.';
+    }
+
+    return formatChangelogSection(match[0], version);
+  } catch (error) {
+    console.warn('⚠️  Warning: Could not extract highlights from CHANGELOG:', error.message);
+    return '### Changes\nSee CHANGELOG.md for detailed changes.';
+  }
+}
+
+function formatChangelogSection(section, version) {
+  // Extract sections (Added, Changed, Fixed, etc.)
+  const sections = {};
+  const sectionRegex = /### (Added|Changed|Fixed|Removed|Deprecated|Security|Documentation)\n([\s\S]*?)(?=\n### |\n## |$)/g;
+  
+  let match;
+  while ((match = sectionRegex.exec(section)) !== null) {
+    const sectionName = match[1];
+    const sectionContent = match[2].trim();
+    if (sectionContent) {
+      sections[sectionName] = sectionContent.split('\n').filter(line => line.trim().startsWith('-'));
+    }
+  }
+
+  // Build highlights section
+  if (Object.keys(sections).length === 0) {
+    return '### Changes\nSee CHANGELOG.md for detailed changes.';
+  }
+
+  let highlights = '### Highlights\n\n';
+  
+  // Prioritize Added, Changed, Fixed
+  const priority = ['Added', 'Changed', 'Fixed', 'Removed', 'Deprecated', 'Security', 'Documentation'];
+  
+  for (const sectionName of priority) {
+    if (sections[sectionName] && sections[sectionName].length > 0) {
+      highlights += `**${sectionName}:**\n`;
+      // Show first 3 items of each section, or all if 3 or fewer
+      const items = sections[sectionName].slice(0, 3);
+      items.forEach(item => {
+        highlights += `${item.trim()}\n`;
+      });
+      if (sections[sectionName].length > 3) {
+        highlights += `- _...and ${sections[sectionName].length - 3} more_\n`;
+      }
+      highlights += '\n';
+    }
+  }
+
+  return highlights.trim();
 }
 
 function createRelease(tag) {
@@ -93,6 +164,9 @@ function doCreateRelease(tag, version) {
     // Release doesn't exist, continue
   }
 
+  // Extract highlights from CHANGELOG
+  const highlights = extractHighlightsFromChangelog(version);
+
   // Create release body
   const body = `## Version ${version}
 
@@ -103,10 +177,12 @@ function doCreateRelease(tag, version) {
 npm install @thomassamoul/generic-logger@${version}
 \`\`\`
 
-### Changes
-See [CHANGELOG.md](https://github.com/thomassamoul/generic-logger/blob/${tag}/CHANGELOG.md) for detailed changes.
+${highlights}
 
 ---
+
+See [CHANGELOG.md](https://github.com/thomassamoul/generic-logger/blob/${tag}/CHANGELOG.md) for detailed changes.
+
 *Manually created for tag ${tag}*
 `;
 
