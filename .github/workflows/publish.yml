@@ -86,53 +86,12 @@ jobs:
         id: changelog
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          HIGHLIGHTS=$(node scripts/extract-changelog-highlights.js "$VERSION")
           
-          # Extract version section from CHANGELOG
-          if grep -q "## \[$VERSION\]" CHANGELOG.md; then
-            # Extract the section
-            awk "/## \\[$VERSION\\]/,/^## /" CHANGELOG.md | sed '$d' > /tmp/changelog_section.txt || \
-            awk "/## \\[$VERSION\\]/,/^\[Unreleased\]/" CHANGELOG.md | sed '$d' > /tmp/changelog_section.txt || \
-            awk "/## \\[$VERSION\\]/,0" CHANGELOG.md > /tmp/changelog_section.txt
-            
-            # Extract highlights (first 3 items per section)
-            HIGHLIGHTS=""
-            CURRENT_SECTION=""
-            
-            while IFS= read -r line; do
-              # Detect section headers
-              if [[ "$line" =~ ^###\ (Added|Changed|Fixed|Removed|Deprecated|Security|Documentation) ]]; then
-                CURRENT_SECTION="${BASH_REMATCH[1]}"
-                HIGHLIGHTS="${HIGHLIGHTS}\n**${CURRENT_SECTION}:**\n"
-              elif [[ "$line" =~ ^- ]] && [ -n "$CURRENT_SECTION" ]; then
-                # Count items per section
-                SECTION_ITEMS=$(echo -e "$HIGHLIGHTS" | grep -A 100 "**${CURRENT_SECTION}:**" | grep -c "^-" || echo "0")
-                if [ "$SECTION_ITEMS" -lt 3 ]; then
-                  HIGHLIGHTS="${HIGHLIGHTS}${line}\n"
-                elif [ "$SECTION_ITEMS" -eq 3 ]; then
-                  # Count total items for this section
-                  TOTAL_ITEMS=$(grep -A 100 "### ${CURRENT_SECTION}" /tmp/changelog_section.txt | grep -c "^-" || echo "0")
-                  if [ "$TOTAL_ITEMS" -gt 3 ]; then
-                    REMAINING=$((TOTAL_ITEMS - 3))
-                    HIGHLIGHTS="${HIGHLIGHTS}- _...and ${REMAINING} more_\n"
-                  fi
-                  CURRENT_SECTION="" # Stop adding more items
-                fi
-              fi
-            done < /tmp/changelog_section.txt
-            
-            # Clean up and format
-            HIGHLIGHTS=$(echo -e "$HIGHLIGHTS" | sed '/^$/d' | sed 's/\n\n/\n/g')
-            
-            if [ -n "$HIGHLIGHTS" ]; then
-              echo "highlights<<EOF" >> $GITHUB_OUTPUT
-              echo -e "### Highlights\n\n${HIGHLIGHTS}\n" >> $GITHUB_OUTPUT
-              echo "EOF" >> $GITHUB_OUTPUT
-            else
-              echo "highlights=### Changes\nSee CHANGELOG.md for detailed changes." >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "highlights=### Changes\nSee CHANGELOG.md for detailed changes." >> $GITHUB_OUTPUT
-          fi
+          # Output highlights for GitHub Actions
+          echo "highlights<<EOF" >> $GITHUB_OUTPUT
+          echo "$HIGHLIGHTS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Publish to NPM
         run: npm publish --access public
