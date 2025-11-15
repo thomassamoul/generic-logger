@@ -25,6 +25,7 @@
 
 import { DefaultSanitizer } from '../sanitizers/default-sanitizer';
 import { sanitizerRegistry } from '../sanitizers/sanitizer-registry';
+import { CombinedFormatter, FormattedOutput, IFormatter } from '../formatters';
 import { EnhancedLogOptions, LogContext, LoggerRepositoryConfig, LogLevel } from '../types';
 import { ILoggerAdapter } from './logger-adapter.interface';
 import { ISanitizer } from './sanitizer.interface';
@@ -43,11 +44,15 @@ export class LoggerRepository {
   private adapters: Map<string, ILoggerAdapter> = new Map();
   private config: LoggerRepositoryConfig;
   private defaultSanitizer: ISanitizer;
+  private defaultFormatter: IFormatter = new CombinedFormatter();
   private enabled = false;
 
   private constructor(config?: LoggerRepositoryConfig) {
     this.config = config || {};
     this.defaultSanitizer = config?.sanitization?.defaultSanitizer || new DefaultSanitizer();
+    if (config?.formatters?.default) {
+      this.defaultFormatter = config.formatters.default;
+    }
   }
 
   /**
@@ -208,9 +213,11 @@ export class LoggerRepository {
   /**
    * Log a message at the specified severity level.
    *
-   * This is the main logging method. It applies sanitization (if enabled)
-   * and routes the message to all registered adapters. Errors from adapters
-   * are caught and logged to console, but do not interrupt execution.
+   * This is the main logging method. It applies sanitization (if enabled),
+   * formatting (if configured), and routes the message to all registered adapters.
+   * Errors from adapters are caught and logged to console, but do not interrupt execution.
+   *
+   * Pipeline: sanitize → format → adapters
    *
    * @param {LogLevel} level - The severity level ('debug' | 'info' | 'warn' | 'error')
    * @param {string} message - The log message text
@@ -239,13 +246,30 @@ export class LoggerRepository {
   log(level: LogLevel, message: string, options?: EnhancedLogOptions): void {
     if (!this.enabled) return;
 
-    // Apply sanitization if enabled
+    // Step 1: Apply sanitization if enabled
     const sanitizedContext = this.sanitizeContext(options);
 
-    // Send to all enabled adapters
+    // Step 2: Apply formatting if configured
+    const formattedOutput = this.formatContext(level, message, sanitizedContext);
+
+    // Step 3: Send to all enabled adapters
+    // Adapters receive both formatted output and original context
+    // They can use formatted output (text/json) or work with raw context
     for (const adapter of this.adapters.values()) {
       try {
-        adapter.log(level, message, sanitizedContext);
+        // Pass formatted output via context metadata for adapters that want it
+        // Adapters can check for formattedOutput in metadata
+        const contextWithFormatted = formattedOutput
+          ? {
+              ...sanitizedContext,
+              metadata: {
+                ...sanitizedContext?.metadata,
+                _formattedOutput: formattedOutput,
+              },
+            }
+          : sanitizedContext;
+
+        adapter.log(level, message, contextWithFormatted);
       } catch (error) {
         // Fail gracefully - log error but don't break the app
         // eslint-disable-next-line no-console
@@ -325,6 +349,39 @@ export class LoggerRepository {
   }
 
   /**
+   * Apply formatting to the log context if formatters are configured.
+   *
+   * This private method handles the formatting logic. If a default formatter
+   * is configured in the repository config, it formats the log entry and
+   * returns the formatted output. Otherwise, it returns undefined.
+   *
+   * @private
+   * @param {LogLevel} level - The log level
+   * @param {string} message - The log message
+   * @param {LogContext | undefined} context - The sanitized context
+   * @returns {FormattedOutput | undefined} The formatted output, or undefined if no formatting
+   */
+  private formatContext(
+    level: LogLevel,
+    message: string,
+    context?: LogContext,
+  ): FormattedOutput | undefined {
+    // If no default formatter is configured, skip formatting
+    if (!this.config.formatters?.default) {
+      return undefined;
+    }
+
+    try {
+      return this.defaultFormatter.format(level, message, context);
+    } catch (error) {
+      // Fail gracefully - log error but don't break the app
+      // eslint-disable-next-line no-console
+      console.warn('Formatter error:', error);
+      return undefined;
+    }
+  }
+
+  /**
    * Register a sanitizer for a specific tag or feature.
    *
    * Tag-specific sanitizers are automatically applied to logs that include
@@ -397,6 +454,11 @@ export class LoggerRepository {
     // Update default sanitizer if provided
     if (config.sanitization?.defaultSanitizer) {
       this.defaultSanitizer = config.sanitization.defaultSanitizer;
+    }
+
+    // Update default formatter if provided
+    if (config.formatters?.default) {
+      this.defaultFormatter = config.formatters.default;
     }
 
     // Note: Reinitializing adapters from config is discouraged

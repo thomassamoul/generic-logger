@@ -21,6 +21,11 @@ A generic, customizable logging library that works across **Browser**, **Node.js
 npm install @thomassamoul/generic-logger
 ```
 
+## Documentation
+
+- [Getting Started Guide](./docs/getting-started.md) - Learn the basics
+- [Testing Guide](./docs/testing.md) - Test your logging code with Jest
+
 ## Quick Start
 
 ### Basic Usage (Console Only)
@@ -137,14 +142,17 @@ logger.info('Logged to both console and Sentry');
 
 ### Logger Repository
 
-The `LoggerRepository` is the central facade that manages multiple adapters and handles sanitization:
+The `LoggerRepository` is the central facade that manages multiple adapters, handles sanitization, and applies formatters:
 
 ```typescript
-import { LoggerRepository } from '@thomassamoul/generic-logger';
+import { LoggerRepository, CombinedFormatter } from '@thomassamoul/generic-logger';
 
 const repo = LoggerRepository.getInstance({
   sanitization: {
     enabled: true,
+  },
+  formatters: {
+    default: new CombinedFormatter(), // Optional: format logs
   },
 });
 
@@ -152,8 +160,42 @@ const repo = LoggerRepository.getInstance({
 await repo.registerAdapter('console', new ConsoleLoggerAdapter(), { enabled: true });
 
 // Log messages
+// Pipeline: sanitize → format → adapters
 repo.log('info', 'Message', { tag: '[Feature]', data: { key: 'value' } });
 ```
+
+### Formatters
+
+Formatters transform log entries into different output formats (plain text, JSON, or both). The library includes three built-in formatters:
+
+**JSON Formatter** - Produces structured JSON output:
+```typescript
+import { JsonFormatter } from '@thomassamoul/generic-logger';
+
+const repo = LoggerRepository.getInstance({
+  formatters: { default: new JsonFormatter() },
+});
+```
+
+**Plain Text Formatter** - Produces human-readable text:
+```typescript
+import { PlainTextFormatter } from '@thomassamoul/generic-logger';
+
+const repo = LoggerRepository.getInstance({
+  formatters: { default: new PlainTextFormatter() },
+});
+```
+
+**Combined Formatter** - Produces both JSON and text (default):
+```typescript
+import { CombinedFormatter } from '@thomassamoul/generic-logger';
+
+const repo = LoggerRepository.getInstance({
+  formatters: { default: new CombinedFormatter() },
+});
+```
+
+Adapters receive formatted output via `context.metadata._formattedOutput` and can use either `text` or `json` properties.
 
 ### Adapters
 
@@ -164,6 +206,7 @@ Adapters are implementations that connect to specific logging libraries. This pa
 - **DataDogLoggerAdapter**: For DataDog (requires your DataDog instance)
 - **WinstonLoggerAdapter**: For Winston (requires your Winston logger)
 - **FileLoggerAdapter**: For file logging (requires custom file writer function)
+- **MockLoggerAdapter**: In-memory adapter for testing (see [Testing Guide](./docs/testing.md))
 
 ### Creating Custom Adapters
 
@@ -629,7 +672,7 @@ await logger.registerAdapter('datadog', new DataDogLoggerAdapter(), {
 
 #### FileAdapterConfig
 
-File logging adapter with custom file writer function:
+File logging adapter with custom file writer function and rotation support:
 
 ```typescript
 interface FileAdapterConfig {
@@ -643,9 +686,14 @@ interface FileAdapterConfig {
    * Required for actual file writing
    * If not provided, logs are buffered in memory
    * 
+   * For rotation support, implement rotation logic inside this function
+   * based on the rotation config. The rotation config is provided in
+   * context.metadata._rotationConfig and formatted text is in context.metadata._formattedText.
+   * 
    * @param message - Formatted log message
    * @param level - Log level
    * @param context - Log context with data, metadata, etc.
+   *                 Contains _formattedText and _rotationConfig in metadata
    */
   fileWriter?: (message: string, level: LogLevel, context?: LogContext) => Promise<void>;
 
@@ -658,20 +706,35 @@ interface FileAdapterConfig {
   formats?: ('json' | 'log')[];
 
   /**
+   * File rotation configuration (informational)
+   * Implement rotation logic in your fileWriter based on these settings
+   */
+  rotation?: {
+    enabled?: boolean;
+    strategy?: 'size' | 'time' | 'size-and-time';
+    maxSize?: number; // bytes
+    maxFiles?: number;
+    pattern?: string; // 'YYYY-MM-DD', etc.
+    retentionDays?: number;
+  };
+
+  /**
    * Maximum file size in bytes before rotation
-   * (Currently informational - implement in your fileWriter)
+   * (Deprecated - use rotation.maxSize instead)
+   * @deprecated
    */
   maxSize?: number;
 
   /**
    * Maximum number of log files to keep
-   * (Currently informational - implement in your fileWriter)
+   * (Deprecated - use rotation.maxFiles instead)
+   * @deprecated
    */
   maxFiles?: number;
 
   /**
    * Directory for log files
-   * (Currently informational - implement in your fileWriter)
+   * (Informational - use in your fileWriter implementation)
    */
   directory?: string;
 
@@ -683,7 +746,7 @@ interface FileAdapterConfig {
 }
 ```
 
-**Example (Node.js):**
+**Example (Node.js with rotation):**
 ```typescript
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -692,15 +755,40 @@ await logger.registerAdapter('file', new FileLoggerAdapter(), {
   enabled: true,
   formats: ['json', 'log'],
   directory: './logs',
+  rotation: {
+    enabled: true,
+    strategy: 'size-and-time',
+    maxSize: 10 * 1024 * 1024, // 10MB
+    maxFiles: 10,
+    pattern: 'YYYY-MM-DD',
+    retentionDays: 30,
+  },
   fileWriter: async (message, level, context) => {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      level,
-      message,
-      ...context
-    };
-    const logLine = JSON.stringify(logEntry) + '\n';
-    await fs.appendFile(path.join('./logs', 'app.log'), logLine);
+    const rotationConfig = context?.metadata?._rotationConfig;
+    const formattedText = context?.metadata?._formattedText || message;
+    const logDir = './logs';
+    
+    // Implement rotation logic based on rotationConfig
+    if (rotationConfig?.enabled) {
+      const logFile = path.join(logDir, 'app.log');
+      const stats = await fs.stat(logFile).catch(() => null);
+      
+      // Check if rotation is needed (size-based)
+      if (stats && rotationConfig.maxSize && stats.size >= rotationConfig.maxSize) {
+        // Rotate file (rename with timestamp, create new file)
+        const timestamp = new Date().toISOString().split('T')[0];
+        await fs.rename(logFile, path.join(logDir, `app.${timestamp}.log`));
+        
+        // Clean up old files if maxFiles exceeded
+        if (rotationConfig.maxFiles) {
+          // Implementation to delete oldest files
+        }
+      }
+    }
+    
+    // Write to file
+    const logFile = path.join(logDir, 'app.log');
+    await fs.appendFile(logFile, formattedText);
   }
 });
 ```
@@ -896,29 +984,38 @@ logger.error('Critical error occurred', error);
 
 ## Testing
 
-The package includes comprehensive tests. To run them:
+The package includes comprehensive tests and a `MockLoggerAdapter` for testing your code. See the [Testing Guide](./docs/testing.md) for detailed information.
 
-```bash
-npm test
-npm run test:coverage
-```
-
-### Testing Your Code
+### Quick Start with MockLoggerAdapter
 
 ```typescript
-import { LoggerRepository } from '@thomassamoul/generic-logger';
+import { MockLoggerAdapter, logger } from '@thomassamoul/generic-logger';
 
 describe('MyFeature', () => {
+  let mockAdapter: MockLoggerAdapter;
+
+  beforeEach(async () => {
+    mockAdapter = new MockLoggerAdapter();
+    await mockAdapter.initialize({ enabled: true });
+    await logger.registerAdapter('mock', mockAdapter, { enabled: true });
+  });
+
   afterEach(() => {
+    mockAdapter.clearLogs();
     LoggerRepository.resetInstance();
   });
 
   it('should log correctly', () => {
-    const repo = LoggerRepository.getInstance();
-    // ... your test code
+    logger.info('Test message');
+    
+    const logs = mockAdapter.getLogs();
+    expect(logs).toHaveLength(1);
+    expect(logs[0].message).toBe('Test message');
   });
 });
 ```
+
+For more examples and advanced testing patterns, see the [Testing Guide](./docs/testing.md).
 
 ## TypeScript Support
 

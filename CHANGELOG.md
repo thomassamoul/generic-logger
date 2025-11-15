@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Pluggable formatters system with `IFormatter` interface
+- Built-in formatters: `JsonFormatter`, `PlainTextFormatter`, `CombinedFormatter`
+- Repository-level formatting pipeline: sanitize → format → adapters
+- Formatted output available to adapters via `context.metadata._formattedOutput`
+- `MockLoggerAdapter` for testing with in-memory log storage
+- Mock adapter helper methods: `getLogs()`, `getLogsByLevel()`, `getLogsByMessage()`, `getLogsByTag()`, `hasLog()`, `clearLogs()`, `getLogCount()`, `getLogCountByLevel()`
+- File adapter rotation configuration (`FileRotationConfig`) with support for size, time, and combined strategies
+- File adapter now consumes formatted output when available
+- `FileRotationConfig` interface with rotation strategy, maxSize, maxFiles, pattern, and retentionDays options
+- Getting Started guide (`docs/getting-started.md`)
+- Testing with Jest guide (`docs/testing.md`) with examples and patterns
+
+### Changed
+- `LoggerRepository.log()` now applies formatting after sanitization if formatters are configured
+- File adapter accepts formatted output from repository formatters
+- File adapter passes rotation config and formatted text to `fileWriter` function via context metadata
+
+### Documentation
+- Added comprehensive Getting Started guide
+- Added Testing with Jest guide with MockLoggerAdapter examples
+- Updated README with formatters section and file adapter rotation documentation
+- Added examples for file rotation implementation in fileWriter
+
+### Fixed
 - Manual release creation script and workflow dispatch option for creating releases for existing tags
 
 ## [0.1.2] - 2025-11-05

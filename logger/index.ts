@@ -122,6 +122,12 @@ export { DataDogLoggerAdapter } from './adapters/datadog-logger-adapter';
 export { WinstonLoggerAdapter } from './adapters/winston-logger-adapter';
 
 /**
+ * Mock logger adapter - in-memory adapter for testing.
+ */
+export { MockLoggerAdapter } from './adapters/mock-logger-adapter';
+export type { MockLogEntry } from './adapters/mock-logger-adapter';
+
+/**
  * Built-in sanitizers.
  */
 
@@ -134,6 +140,20 @@ export { DefaultSanitizer } from './sanitizers/default-sanitizer';
  * Global sanitizer registry for tag-based sanitization.
  */
 export { sanitizerRegistry } from './sanitizers/sanitizer-registry';
+
+/**
+ * Formatters for log output formatting.
+ */
+
+/**
+ * Formatter interface and implementations.
+ */
+export type { IFormatter, FormattedOutput } from './formatters';
+export {
+  JsonFormatter,
+  PlainTextFormatter,
+  CombinedFormatter,
+} from './formatters';
 
 /**
  * Configuration helpers (optional examples).
@@ -157,6 +177,7 @@ export type {
   LogContext,
   ConsoleAdapterConfig,
   FileAdapterConfig,
+  FileRotationConfig,
   SentryAdapterConfig,
   DataDogAdapterConfig,
   WinstonAdapterConfig,

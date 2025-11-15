@@ -5,6 +5,7 @@
  */
 
 import { ISanitizer } from './core/sanitizer.interface';
+import { IFormatter } from './formatters/formatter.interface';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LoggerEnvironment = 'dev' | 'stage' | 'prod';
@@ -97,17 +98,98 @@ export interface ConsoleAdapterConfig {
 }
 
 /**
+ * File rotation configuration (informational - implement in your fileWriter)
+ */
+export interface FileRotationConfig {
+  /**
+   * Enable file rotation
+   * @default false
+   */
+  enabled?: boolean;
+
+  /**
+   * Rotation strategy
+   * - 'size': Rotate when file reaches maxSize
+   * - 'time': Rotate based on time pattern
+   * - 'size-and-time': Rotate based on both size and time
+   * @default 'size'
+   */
+  strategy?: 'size' | 'time' | 'size-and-time';
+
+  /**
+   * Maximum file size in bytes before rotation
+   * Used when strategy is 'size' or 'size-and-time'
+   * @default 10MB
+   */
+  maxSize?: number;
+
+  /**
+   * Maximum number of rotated files to keep
+   * Older files beyond this count will be deleted
+   * @default 10
+   */
+  maxFiles?: number;
+
+  /**
+   * Time pattern for rotation (when strategy includes 'time')
+   * Examples: 'YYYY-MM-DD', 'YYYY-MM-DD-HH'
+   * @default 'YYYY-MM-DD'
+   */
+  pattern?: string;
+
+  /**
+   * Retention period in days
+   * Files older than this will be deleted
+   * @default undefined (no automatic deletion based on age)
+   */
+  retentionDays?: number;
+}
+
+/**
  * File adapter configuration
  */
 export interface FileAdapterConfig extends LoggerAdapterConfig {
   /**
    * Optional custom file writer function
    * If not provided, adapter will use a simple implementation when possible
+   * 
+   * For rotation support, implement rotation logic inside this function
+   * based on the rotation config provided below.
    */
   fileWriter?: (message: string, level: LogLevel, context?: LogContext) => Promise<void>;
+  
+  /**
+   * Output formats for log entries
+   * - 'json': JSON format
+   * - 'log': Plain text format
+   * @default ['json']
+   */
   formats?: ('json' | 'log')[];
+  
+  /**
+   * File rotation configuration (informational)
+   * Implement rotation logic in your fileWriter function based on these settings
+   */
+  rotation?: FileRotationConfig;
+  
+  /**
+   * Maximum file size in bytes before rotation
+   * (Deprecated - use rotation.maxSize instead)
+   * @deprecated
+   */
   maxSize?: number;
+  
+  /**
+   * Maximum number of log files to keep
+   * (Deprecated - use rotation.maxFiles instead)
+   * @deprecated
+   */
   maxFiles?: number;
+  
+  /**
+   * Directory for log files
+   * (Informational - use in your fileWriter implementation)
+   */
   directory?: string;
 }
 
@@ -186,6 +268,17 @@ export interface LoggerRepositoryConfig {
   sanitization?: {
     enabled?: boolean;
     defaultSanitizer?: ISanitizer;
+  };
+  /**
+   * Formatter configuration
+   */
+  formatters?: {
+    /**
+     * Default formatter to use for all adapters
+     * If not provided, adapters receive raw context without formatting
+     * @default undefined (no formatting)
+     */
+    default?: IFormatter;
   };
   /**
    * Minimum log level severity
