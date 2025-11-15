@@ -146,9 +146,12 @@ function createRelease(version, tag, dryRun = false) {
   let highlights = '';
   try {
     highlights = extractHighlightsFromChangelog(version);
+    if (!highlights || highlights.trim().length === 0) {
+      highlights = '### Changes\nSee CHANGELOG.md for detailed changes.';
+    }
   } catch (error) {
     console.warn('⚠️  Warning: Could not extract highlights from CHANGELOG:', error.message);
-    highlights = 'See CHANGELOG.md for detailed changes.';
+    highlights = '### Changes\nSee CHANGELOG.md for detailed changes.';
   }
   
   // Generate release body

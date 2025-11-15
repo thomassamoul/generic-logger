@@ -17,8 +17,10 @@ const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
 function extractHighlights(version) {
   try {
     if (!fs.existsSync(changelogPath)) {
-      console.log('### Changes\nSee CHANGELOG.md for detailed changes.');
-      return;
+      if (require.main === module) {
+        console.log('### Changes\nSee CHANGELOG.md for detailed changes.');
+      }
+      return '### Changes\nSee CHANGELOG.md for detailed changes.';
     }
 
     const changelog = fs.readFileSync(changelogPath, 'utf8');
@@ -33,17 +35,31 @@ function extractHighlights(version) {
       // Try to find [Unreleased] if version not found
       const unreleasedMatch = changelog.match(/## \[Unreleased\][^]*?(?=\n## |$)/s);
       if (unreleasedMatch && unreleasedMatch[0]) {
-        formatChangelogSection(unreleasedMatch[0]);
-        return;
+        const result = formatChangelogSection(unreleasedMatch[0]);
+        if (require.main === module) {
+          console.log(result);
+        }
+        return result;
       }
-      console.log('### Changes\nSee CHANGELOG.md for detailed changes.');
-      return;
+      const defaultMsg = '### Changes\nSee CHANGELOG.md for detailed changes.';
+      if (require.main === module) {
+        console.log(defaultMsg);
+      }
+      return defaultMsg;
     }
 
-    formatChangelogSection(match[0]);
+    const result = formatChangelogSection(match[0]);
+    if (require.main === module) {
+      console.log(result);
+    }
+    return result;
   } catch (error) {
-    console.error('Error extracting highlights:', error.message);
-    console.log('### Changes\nSee CHANGELOG.md for detailed changes.');
+    const errorMsg = '### Changes\nSee CHANGELOG.md for detailed changes.';
+    if (require.main === module) {
+      console.error('Error extracting highlights:', error.message);
+      console.log(errorMsg);
+    }
+    return errorMsg;
   }
 }
 
@@ -63,8 +79,7 @@ function formatChangelogSection(section) {
 
   // Build highlights section
   if (Object.keys(sections).length === 0) {
-    console.log('### Changes\nSee CHANGELOG.md for detailed changes.');
-    return;
+    return '### Changes\nSee CHANGELOG.md for detailed changes.';
   }
 
   let highlights = '### Highlights\n\n';
@@ -87,7 +102,7 @@ function formatChangelogSection(section) {
     }
   }
 
-  console.log(highlights.trim());
+  return highlights.trim();
 }
 
 function main() {
@@ -104,6 +119,10 @@ function main() {
 }
 
 // Export for use in other scripts
+function extractHighlightsFromChangelog(version) {
+  return extractHighlights(version);
+}
+
 if (require.main === module) {
   main();
 } else {
