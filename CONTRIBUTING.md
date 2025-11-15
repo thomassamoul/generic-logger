@@ -20,7 +20,7 @@ This project adheres to a code of conduct that all contributors are expected to 
 
 ## Project Structure
 
-See [`.cursorrules`](./.cursorrules) for detailed project structure guidelines. Key directories:
+See [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md) for detailed project structure guidelines. Key directories:
 
 - `logger/adapters/` - Logger adapter implementations
 - `logger/formatters/` - Log formatter implementations
@@ -285,7 +285,7 @@ describe('MyFeature', () => {
 
 ### File Organization
 
-- Follow the structure in `.cursorrules`
+- Follow the structure in `PROJECT_STRUCTURE.md`
 - Keep files focused and single-purpose
 - Export from appropriate index files
 

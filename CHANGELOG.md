@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Project structure guidelines in `.cursorrules`
+- Project structure guidelines in `PROJECT_STRUCTURE.md`
 - CONTRIBUTING.md with git workflow documentation
 - Release highlights extraction from CHANGELOG.md
 
@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release body format includes highlights section at top, CHANGELOG link at bottom
 
 ### Documentation
-- Added `.cursorrules` with project structure guidelines
+- Added `PROJECT_STRUCTURE.md` with project structure guidelines
 - Added CONTRIBUTING.md with detailed git workflow (branch → commits → PR → squash merge)
 - Updated release scripts to automatically extract highlights from CHANGELOG
 

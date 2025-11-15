@@ -23,14 +23,16 @@ function extractHighlights(version) {
 
     const changelog = fs.readFileSync(changelogPath, 'utf8');
     
-    // Find the version section
-    const versionRegex = new RegExp(`## \\[${version.replace(/\./g, '\\.')}\\][^#]*`, 's');
+    // Find the version section (e.g., "## [0.2.0] - 2025-11-15" or "## [0.2.0]")
+    const escapedVersion = version.replace(/\./g, '\\.');
+    // Match from version header until next version header or end of file
+    const versionRegex = new RegExp(`## \\[${escapedVersion}\\][^]*?(?=\n## |$)`, 's');
     const match = changelog.match(versionRegex);
     
-    if (!match) {
+    if (!match || !match[0]) {
       // Try to find [Unreleased] if version not found
-      const unreleasedMatch = changelog.match(/## \[Unreleased\][^#]*/s);
-      if (unreleasedMatch) {
+      const unreleasedMatch = changelog.match(/## \[Unreleased\][^]*?(?=\n## |$)/s);
+      if (unreleasedMatch && unreleasedMatch[0]) {
         formatChangelogSection(unreleasedMatch[0]);
         return;
       }
