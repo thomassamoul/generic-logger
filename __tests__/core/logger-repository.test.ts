@@ -40,6 +40,9 @@ describe('LoggerRepository', () => {
       const repo = LoggerRepository.getInstance();
       const adapter = new ConsoleLoggerAdapter();
       
+      // Suppress expected console.warn from error handling
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
       // Mock initialize to throw
       const originalInit = adapter.initialize;
       adapter.initialize = jest.fn().mockRejectedValue(new Error('Init failed'));
@@ -48,6 +51,9 @@ describe('LoggerRepository', () => {
       
       // Should not throw, but adapter should not be enabled
       expect(adapter.initialize).toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalled();
+      
+      consoleWarnSpy.mockRestore();
     });
   });
 
@@ -90,6 +96,9 @@ describe('LoggerRepository', () => {
         isEnabled: jest.fn().mockReturnValue(true),
       } as unknown as ILoggerAdapter;
 
+      // Suppress expected console.warn from error handling
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
       (repo as any).adapters.set('adapter1', adapter);
       (repo as any).enabled = true;
 
@@ -97,6 +106,10 @@ describe('LoggerRepository', () => {
       expect(() => {
         repo.log('info', 'test message');
       }).not.toThrow();
+      
+      expect(consoleWarnSpy).toHaveBeenCalled();
+      
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not log when repository is not enabled', () => {
