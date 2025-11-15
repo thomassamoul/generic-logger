@@ -153,8 +153,9 @@ describe('LoggerRepository', () => {
       });
 
       expect(adapter.log).toHaveBeenCalled();
-      const callArgs = adapter.log.mock.calls[0];
-      const sanitizedContext = callArgs[2];
+      const mockLog = adapter.log as jest.MockedFunction<(level: LogLevel, message: string, context?: LogContext) => void>;
+      const callArgs = mockLog.mock.calls[0];
+      const sanitizedContext = callArgs[2]!;
       expect(sanitizedContext.data.password).toBe('[REDACTED]');
       expect(sanitizedContext.data.username).toBe('user');
     });
@@ -182,8 +183,9 @@ describe('LoggerRepository', () => {
       });
 
       expect(adapter.log).toHaveBeenCalled();
-      const callArgs = adapter.log.mock.calls[0];
-      const context = callArgs[2];
+      const mockLog = adapter.log as jest.MockedFunction<(level: LogLevel, message: string, context?: LogContext) => void>;
+      const callArgs = mockLog.mock.calls[0];
+      const context = callArgs[2]!;
       expect(context.data.password).toBe('secret123');
     });
   });
