@@ -173,6 +173,39 @@ git push -u origin feature/description-of-feature
 
 **Tags and releases are created AFTER merging to main:**
 
+#### Automated (Recommended)
+
+Use the automated script that creates tag, pushes it, and lets GitHub Actions handle the release:
+
+```bash
+# After PR is merged to main
+git checkout main
+git pull origin main
+
+# Create tag and release (automated)
+node scripts/create-tag-and-release.js
+
+# Or specify version explicitly
+node scripts/create-tag-and-release.js 0.3.0
+
+# Dry run to preview
+node scripts/create-tag-and-release.js --dry-run
+```
+
+This script will:
+1. ✅ Ensure you're on main branch
+2. ✅ Pull latest changes
+3. ✅ Create git tag
+4. ✅ Push tag to remote (triggers GitHub Actions)
+5. ✅ GitHub Actions workflow will automatically:
+   - Extract highlights from CHANGELOG.md
+   - Publish to npm (using trusted publishing OIDC)
+   - Create GitHub release with highlights
+
+#### Manual Process
+
+If you prefer manual steps:
+
 1. **Checkout main and pull latest:**
    ```bash
    git checkout main
@@ -189,10 +222,12 @@ git push -u origin feature/description-of-feature
    git push origin v0.2.1
    ```
 
-5. **The publish workflow will:**
+5. **The publish workflow will automatically:**
    - Extract highlights from CHANGELOG.md
-   - Publish to npm (using trusted publishing)
+   - Publish to npm (using trusted publishing OIDC)
    - Create GitHub release with highlights
+
+**Note:** The GitHub Actions workflow (`publish.yml`) runs automatically when a tag is pushed to `main`.
 
 6. **Or manually create release** (if workflow fails):
    ```bash
